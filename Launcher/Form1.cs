@@ -1,40 +1,121 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
+﻿using Swordie;
+using System;
 using System.Diagnostics;
 using System.Drawing;
-using System.Linq;
+using System.Net.Mail;
 using System.Runtime.InteropServices;
 using System.Text;
-using System.Threading.Tasks;
 using System.Windows.Forms;
-using Swordie;
 
 namespace SwordieLauncher
 {
     public partial class Form1 : Form
     {
-        private Client client;
+        [DllImport("Gdi32.dll", EntryPoint = "CreateRoundRectRgn")]
+        private static extern IntPtr CreateRoundRectRgn
+        (
+            int nLeftRect,
+            int nTopRect,
+            int nRightRect,
+            int nBottomRect,
+            int nWidthEllipse,
+            int nHeightEllipse
+        );
+
+        private readonly Client client;
 
         public Form1()
         {
             InitializeComponent();
-            this.client = new Client();
-            this.client.Connect();
+
+            client = new Client();
+            client.Connect();
+
+            Region = Region.FromHrgn(CreateRoundRectRgn(0, 0, Width, Height, 25, 25));
+
+            pnlNav.Height = btnLoginNav.Height;
+            pnlNav.Top = btnLoginNav.Top;
+
+            btnLoginNav.BackColor = Color.FromArgb(46, 51, 73);
+
+            tbEmail.Visible = false;
+            lblEmail.Visible = false;
+            btnCreateAccount.Visible = false;
+            btnLogin.Visible = true;
+
+            tbUsername.Text = "";
+            tbPassword.Text = "";
+            tbEmail.Text = "";
+
+            lblSuccess.Text = "";
+            lblSuccess.Visible = false;
+            lblError.Text = "";
+            lblError.Visible = false;
         }
 
-        private void LoginButton_Click(object sender, EventArgs e)
+        private void btnLoginNav_Click(object sender, EventArgs e)
         {
-            LaunchMapleAsync();
+            pnlNav.Height = btnLoginNav.Height;
+            pnlNav.Top = btnLoginNav.Top;
+
+            btnLoginNav.BackColor = Color.FromArgb(46, 51, 73);
+            btnCreateAccountNav.BackColor = Color.FromArgb(24, 30, 54);
+
+            tbEmail.Visible = false;
+            lblEmail.Visible = false;
+            btnCreateAccount.Visible = false;
+            btnLogin.Visible = true;
+
+            tbUsername.Text = "";
+            tbPassword.Text = "";
+            tbEmail.Text = "";
+
+            lblSuccess.Text = "";
+            lblSuccess.Visible = false;
+            lblError.Text = "";
+            lblError.Visible = false;
         }
 
+        private void btnLogin_Leave(object sender, EventArgs e)
+        {
+            btnLoginNav.BackColor = Color.FromArgb(24, 30, 54);
+        }
 
+        private void btnCreateAccountNav_Click(object sender, EventArgs e)
+        {
+            pnlNav.Height = btnCreateAccountNav.Height;
+            pnlNav.Top = btnCreateAccountNav.Top;
 
-        private static String sDllPath = "ijl15.dll";
+            btnLoginNav.BackColor = Color.FromArgb(24, 30, 54);
+            btnCreateAccountNav.BackColor = Color.FromArgb(46, 51, 73);
 
+            tbEmail.Visible = true;
+            lblEmail.Visible = true;
+            btnCreateAccount.Visible = true;
+            btnLogin.Visible = false;
 
-        private static uint CREATE_SUSPENDED = 0x00000004;
+            tbUsername.Text = "";
+            tbPassword.Text = "";
+            tbEmail.Text = "";
+
+            lblSuccess.Text = "";
+            lblSuccess.Visible = false;
+            lblError.Text = "";
+            lblError.Visible = false;
+        }
+
+        private void btnCreateAccount_Leave(object sender, EventArgs e)
+        {
+            btnCreateAccountNav.BackColor = Color.FromArgb(24, 30, 54);
+        }
+
+        private void btnExit_Click(object sender, EventArgs e)
+        {
+            Close();
+        }
+
+        private static readonly string sDllPath = "ijl15.dll";
+        private static readonly uint CREATE_SUSPENDED = 0x00000004;
 
         public struct PROCESS_INFORMATION
         {
@@ -43,7 +124,6 @@ namespace SwordieLauncher
             public uint dwProcessId;
             public uint dwThreadId;
         }
-
 
         public struct STARTUPINFO
         {
@@ -67,8 +147,6 @@ namespace SwordieLauncher
             public IntPtr hStdError;
         }
 
-
-
         public struct SECURITY_ATTRIBUTES
         {
             public int length;
@@ -78,10 +156,7 @@ namespace SwordieLauncher
         }
 
         [DllImport("kernel32.dll")]
-        static extern bool CreateProcess(string lpApplicationName, string lpCommandLine, IntPtr lpProcessAttributes, IntPtr lpThreadAttributes,
-                        bool bInheritHandles, uint dwCreationFlags, IntPtr lpEnvironment,
-                        string lpCurrentDirectory, ref STARTUPINFO lpStartupInfo, out PROCESS_INFORMATION lpProcessInformation);
-
+        static extern bool CreateProcess(string lpApplicationName, string lpCommandLine, IntPtr lpProcessAttributes, IntPtr lpThreadAttributes, bool bInheritHandles, uint dwCreationFlags, IntPtr lpEnvironment, string lpCurrentDirectory, ref STARTUPINFO lpStartupInfo, out PROCESS_INFORMATION lpProcessInformation);
 
         [DllImport("kernel32.dll", SetLastError = true)]
         static extern uint ResumeThread(IntPtr hThread);
@@ -105,20 +180,126 @@ namespace SwordieLauncher
         static extern int WriteProcessMemory(IntPtr hProcess, IntPtr lpBaseAddress, byte[] buffer, uint size, int lpNumberOfBytesWritten);
 
         [DllImport("kernel32.dll", SetLastError = true)]
-        static extern IntPtr CreateRemoteThread(IntPtr hProcess, IntPtr lpThreadAttribute, IntPtr dwStackSize, IntPtr lpStartAddress,
-            IntPtr lpParameter, uint dwCreationFlags, IntPtr lpThreadId);
+        static extern IntPtr CreateRemoteThread(IntPtr hProcess, IntPtr lpThreadAttribute, IntPtr dwStackSize, IntPtr lpStartAddress, IntPtr lpParameter, uint dwCreationFlags, IntPtr lpThreadId);
 
+        private void btnLogin_Click(object sender, EventArgs e)
+        {
+            btnLogin.Enabled = false;
 
-        private static int GetProcessId(String proc)
+            STARTUPINFO si = new STARTUPINFO();
+
+            string text1 = tbUsername.Text;
+            string text2 = tbPassword.Text;
+
+            tbPassword.Clear();
+
+            string token = GetToken(text1, text2);
+            bool flag = !token.Equals("");
+
+            if (flag)
+            {
+                try
+                {
+                    bool bCreateProc = CreateProcess("MapleStory.exe", $" WebStart {token}", IntPtr.Zero, IntPtr.Zero, false, CREATE_SUSPENDED, IntPtr.Zero, null, ref si, out PROCESS_INFORMATION pi);
+
+                    if (bCreateProc)
+                    {
+                        int bInject = Inject("MapleStory", sDllPath);
+
+                        if (bInject == 0)
+                        {
+                            ResumeThread(pi.hThread);
+
+                            CloseHandle(pi.hThread);
+                            CloseHandle(pi.hProcess);
+
+                            lblSuccess.Text = "MapleStory launched!";
+                            lblSuccess.Visible = true;
+                            lblError.Text = "";
+                            lblError.Visible = false;
+                        }
+                        else
+                        {
+                            lblSuccess.Text = "";
+                            lblSuccess.Visible = false;
+                            lblError.Text = $"Error code: {bInject}";
+                            lblError.Visible = true;
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    lblSuccess.Text = "";
+                    lblSuccess.Visible = false;
+                    lblError.Text = "Could not start! Make sure the file is in your game folder and that this program is ran as admin.";
+                    lblError.Visible = true;
+
+                    Console.WriteLine(ex.Message);
+                }
+            }
+            else
+            {
+                lblSuccess.Text = "";
+                lblSuccess.Visible = false;
+                lblError.Text = "Invalid username/password combination.";
+                lblError.Visible = true;
+            }
+
+            btnLogin.Enabled = true;
+        }
+
+        private string GetToken(string username, string pwd)
+        {
+            client.Send(OutPackets.AuthRequest(username, pwd));
+
+            return Handlers.getAuthTokenFromInput(client.Receive());
+        }
+
+        private static int Inject(string exe, string dllPath)
+        {
+            int processID = GetProcessId(exe);
+
+            if (processID == -1)
+                return 1;
+
+            IntPtr pLoadLibraryAddress = GetProcAddress(GetModuleHandle("Kernel32.dll"), "LoadLibraryA");
+
+            if (pLoadLibraryAddress == (IntPtr)0)
+                return 2;
+
+            IntPtr processHandle = OpenProcess((0x2 | 0x8 | 0x10 | 0x20 | 0x400), 1, (uint)processID);
+
+            if (processHandle == (IntPtr)0)
+                return 3;
+
+            IntPtr lpAddress = VirtualAllocEx(processHandle, (IntPtr)null, (IntPtr)dllPath.Length, (0x1000 | 0x2000), 0X40);
+
+            if (lpAddress == (IntPtr)0)
+                return 4;
+
+            byte[] bytes = Encoding.ASCII.GetBytes(dllPath);
+
+            if (WriteProcessMemory(processHandle, lpAddress, bytes, (uint)bytes.Length, 0) == 0)
+                return 5;
+
+            if (CreateRemoteThread(processHandle, (IntPtr)null, (IntPtr)0, pLoadLibraryAddress, lpAddress, 0, (IntPtr)null) == (IntPtr)0)
+                return 6;
+
+            CloseHandle(processHandle);
+
+            return 0;
+        }
+
+        private static int GetProcessId(string proc)
         {
             int processID = -1;
             Process[] processes = Process.GetProcesses();
+
             for (int i = 0; i < processes.Length; i++)
             {
                 if (processes[i].ProcessName == proc)
                 {
-                    processID = (int)processes[i].Id;
-
+                    processID = processes[i].Id;
                     break;
                 }
             }
@@ -126,156 +307,105 @@ namespace SwordieLauncher
             return processID;
         }
 
-
-        private static int Inject(String exe, String dllPath)
+        private void btnCreateAccount_Click(object sender, EventArgs e)
         {
-            int processID = GetProcessId(exe);
-            if (processID == -1)
+            btnCreateAccount.Enabled = false;
+
+            string username = tbUsername.Text;
+            string password = tbPassword.Text;
+            string email = tbEmail.Text;
+
+            tbPassword.Text = "";
+
+            if (username.Length < 4)
             {
-                return 1;
+                lblSuccess.Text = "";
+                lblSuccess.Visible = false;
+                lblError.Text = "Username must be at least 4 characters long.";
+                lblError.Visible = true;
             }
-
-            IntPtr pLoadLibraryAddress = GetProcAddress(GetModuleHandle("Kernel32.dll"), "LoadLibraryA");
-            if (pLoadLibraryAddress == (IntPtr)0)
+            else if (password.Length < 6)
             {
-                return 2;
+                lblSuccess.Text = "";
+                lblSuccess.Visible = false;
+                lblError.Text = "Password must be at least 6 characters long.";
+                lblError.Visible = true;
             }
-
-            IntPtr processHandle = OpenProcess((0x2 | 0x8 | 0x10 | 0x20 | 0x400), 1, (uint)processID);
-            if (processHandle == (IntPtr)0)
+            else if (email == null || email.Equals("") || !IsValid(email))
             {
-                return 3;
-            }
-
-            IntPtr lpAddress = VirtualAllocEx(processHandle, (IntPtr)null, (IntPtr)dllPath.Length, (0x1000 | 0x2000), 0X40);
-            if (lpAddress == (IntPtr)0)
-            {
-                return 4;
-            }
-
-            byte[] bytes = Encoding.ASCII.GetBytes(dllPath);
-            if (WriteProcessMemory(processHandle, lpAddress, bytes, (uint)bytes.Length, 0) == 0)
-            {
-                return 5;
-            }
-
-            if (CreateRemoteThread(processHandle, (IntPtr)null, (IntPtr)0, pLoadLibraryAddress, lpAddress, 0, (IntPtr)null) == (IntPtr)0)
-            {
-                return 6;
-            }
-
-            CloseHandle(processHandle);
-
-            return 0;
-        }
-
-
-
-        async Task<bool> LaunchMapleAsync()
-        {
-            STARTUPINFO si = new STARTUPINFO();
-            PROCESS_INFORMATION pi = new PROCESS_INFORMATION();
-
-
-            string text1 = this.usernameTextBox.Text;
-            string text2 = this.passwordTextBox.Text;
-            this.passwordTextBox.Clear();
-            string token = await this.GetToken(text1, text2);
-            bool flag = !token.Equals("");
-            if (flag)
-                try
-                {
-                    bool bCreateProc = CreateProcess("MapleStory.exe", $" WebStart {token}", IntPtr.Zero, IntPtr.Zero, false, CREATE_SUSPENDED, IntPtr.Zero, null, ref si, out pi);
-                   
-
-                    if (bCreateProc)
-                    {
-                        int bInject = Inject("MapleStory", sDllPath);
-                        if (bInject == 0)
-                        {
-                            ResumeThread(pi.hThread);
-
-                            CloseHandle(pi.hThread);
-                            CloseHandle(pi.hProcess);
-                        }
-                        else
-                        {
-                            MessageBox.Show("Error code: " + bInject.ToString());
-                        }
-                    }
-                }
-
-                catch (Exception ex)
-                {
-                    int num = (int)MessageBox.Show("Could not start! Make sure the file is in your game folder and that this program is ran as admin.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Hand);
-                }
-        
-        else
-            {
-                int num1 = (int)MessageBox.Show("Invalid username/password combination.");
-    }
-            return flag;
-        }
-
-
-
-
-public void Run()
-        {
-
-            LaunchMapleAsync();
-
-        }
-
-
-
-
-
-    private async Task<bool> authAndStuff()
-        {
-            string text1 = this.usernameTextBox.Text;
-            string text2 = this.passwordTextBox.Text;
-            this.passwordTextBox.Clear();
-            string token = await this.GetToken(text1, text2);
-            bool flag = !token.Equals("");
-            if (flag)
-            {
-                try
-                {
-                    new Process()
-                    {
-                        StartInfo = {
-                            FileName = "MapleStory.exe",
-                            Arguments = $"WebStart admin"
-                        }
-                    }.Start();
-                }
-                catch (Exception ex)
-                {
-                    int num = (int)MessageBox.Show("Could not start! Make sure the file is in your game folder and that this programming is run as admin.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Hand);
-                }
+                lblSuccess.Text = "";
+                lblSuccess.Visible = false;
+                lblError.Text = "Email is invalid.";
+                lblError.Visible = true;
             }
             else
             {
-                int num1 = (int)MessageBox.Show("Invalid username/password combination.");
+                CreateAccount(username, password, email);
             }
-            return flag;
+
+            btnCreateAccount.Enabled = true;
         }
 
-        private async Task<string> GetToken(string username, string pwd)
+        private bool IsValid(string email)
         {
-            this.client.Send(OutPackets.AuthRequest(username, pwd));
-            return Handlers.getAuthTokenFromInput(this.client.Receive());
+            try
+            {
+                MailAddress mailAddress = new MailAddress(email);
+
+                return true;
+            }
+            catch (FormatException ex)
+            {
+                Console.WriteLine(ex.Message);
+
+                return false;
+            }
         }
 
-        private void CreateAccountButton_Click(object sender, EventArgs e)
+        private bool CreateAccount(string username, string password, string email)
         {
-            new Form2() { client = this.client }.Show();
+            byte request = SendAccountCreateRequest(username, password, email);
+
+            switch (request)
+            {
+                case 0:
+                    lblSuccess.Text = "Account successfully created!";
+                    lblSuccess.Visible = true;
+                    lblError.Text = "";
+                    lblError.Visible = false;
+                    break;
+                case 1:
+                    lblSuccess.Text = "";
+                    lblSuccess.Visible = false;
+                    lblError.Text = "Account name already taken!";
+                    lblError.Visible = true;
+                    break;
+                case 2:
+                    lblSuccess.Text = "";
+                    lblSuccess.Visible = false;
+                    lblError.Text = "This IP has already created an account!";
+                    lblError.Visible = true;
+                    break;
+                case 3:
+                    lblSuccess.Text = "";
+                    lblSuccess.Visible = false;
+                    lblError.Text = "Unknown error: Client and server info are mismatched!";
+                    lblError.Visible = true;
+                    break;
+            }
+
+            return request == 0;
         }
 
-        private void Form1_Load(object sender, EventArgs e)
+        private byte SendAccountCreateRequest(string username, string password, string email)
         {
+            client.Send(OutPackets.CreateAccountRequest(username, password, email));
 
+            InPacket inPacket = client.Receive();
+            inPacket.readInt();
+            inPacket.readShort();
+
+            return inPacket.readByte();
         }
     }
 }
