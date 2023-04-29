@@ -31,7 +31,7 @@ namespace SwordieLauncher
 
 
 
-        private static String sDllPath = "v214_local.dll"; // dll name
+        private static String sDllPath = "ijl15.dll";
 
 
         private static uint CREATE_SUSPENDED = 0x00000004;

@@ -11,7 +11,7 @@ namespace Swordie
         private static ManualResetEvent sendDone = new ManualResetEvent(false);
         private static ManualResetEvent receiveDone = new ManualResetEvent(false);
         private int PORT = 8483;
-        private string HOST = "127.0.0.1"; // put server ip here
+        private string HOST = "127.0.0.1";
         public Socket socket;
 
         public void Connect()
