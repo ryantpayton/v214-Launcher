@@ -1,5 +1,5 @@
 1. Open `Launcher.sln`
-1. Change the configuration to `Release` \ `Any CPU`
+1. Change the configuration to `Release`|`Any CPU`
 1. Expand the `main` folder
 1. Open `Client.cs`
 1. Change `HOST` to match your server's IP address
