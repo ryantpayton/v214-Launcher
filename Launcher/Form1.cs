@@ -5,6 +5,7 @@ using System.Drawing;
 using System.Net.Mail;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 
 namespace SwordieLauncher
@@ -217,6 +218,8 @@ namespace SwordieLauncher
                             lblSuccess.Visible = true;
                             lblError.Text = "";
                             lblError.Visible = false;
+
+                            ClearSuccessText();
                         }
                         else
                         {
@@ -246,6 +249,14 @@ namespace SwordieLauncher
             }
 
             btnLogin.Enabled = true;
+        }
+
+        private async Task ClearSuccessText()
+        {
+            await Task.Delay(1000 * 10);
+
+            lblSuccess.Text = "";
+            lblSuccess.Visible = false;
         }
 
         private string GetToken(string username, string pwd)
