@@ -1,9 +1,9 @@
 1. Open `Launcher.sln`
-1. Change the configuration to `Release`|`Any CPU`
-1. Expand the `Launcher` project
-1. Expand the `main` folder
-1. Open `Client.cs`
-1. Change `HOST` to match your server's IP address
-1. Click `Build` > `Build Solution` or by pressing `Ctrl + Shift + B`
-1. Navigate to `Launcher` > `bin` > `Release`
-1. Copy `Launcher.exe` to your client folder
+2. Change the configuration to `Release`|`Any CPU`
+3. Expand the `Launcher` project
+4. Expand the `main` folder
+5. Open `Client.cs`
+6. Change `HOST` to match your server's IP address
+7. Click `Build` > `Build Solution` or by pressing `Ctrl + Shift + B`
+8. Navigate to `Launcher` > `bin` > `Release`
+9. Copy `Launcher.exe` to your client folder
